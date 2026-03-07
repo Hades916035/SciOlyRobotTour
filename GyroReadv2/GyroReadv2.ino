@@ -2,7 +2,6 @@
 
 const int MPU = 0x68;
 
-// Motor driver pins
 int IN1 = 5;
 int IN2 = 4;
 int IN3 = 3;
@@ -24,7 +23,6 @@ void setup() {
 
   Serial.begin(9600);
 
-  // Motor pins
   pinMode(IN1, OUTPUT);
   pinMode(IN2, OUTPUT);
   pinMode(IN3, OUTPUT);
@@ -32,10 +30,8 @@ void setup() {
 
   stopMotors();
 
-  // Use custom I2C pins
-  Wire.begin(A4, A3);   // SDA, SCL
+  Wire.begin();   // start I2C
 
-  // Wake MPU6050
   Wire.beginTransmission(MPU);
   Wire.write(0x6B);
   Wire.write(0);
@@ -43,31 +39,28 @@ void setup() {
 
   delay(1000);
 
-  Serial.println("Calibrating gyro... Keep robot still.");
+  Serial.println("Calibrating...");
 
   long total = 0;
 
-  for (int i = 0; i < 1000; i++) {
+  for(int i=0;i<1000;i++){
     total += readGyroZ();
     delay(2);
   }
 
   gyroZ_offset = total / 1000.0;
 
-  Serial.println("Calibration done.");
-
   prevTime = millis();
 }
 
-void loop() {
+void loop(){
 
   unsigned long currentTime = millis();
-  float dt = (currentTime - prevTime) / 1000.0;
+  float dt = (currentTime - prevTime)/1000.0;
   prevTime = currentTime;
 
   float gyroZ = readGyroZ();
-
-  float degPerSec = (gyroZ - gyroZ_offset) / 131.0;
+  float degPerSec = (gyroZ - gyroZ_offset)/131.0;
 
   angleZ += degPerSec * dt;
 
@@ -77,16 +70,16 @@ void loop() {
   delay(20);
 }
 
-int16_t readGyroZ() {
+int16_t readGyroZ(){
 
   Wire.beginTransmission(MPU);
   Wire.write(0x47);
   Wire.endTransmission(false);
 
-  Wire.requestFrom(MPU, 2, true);
+  Wire.requestFrom(MPU,2,true);
 
   int16_t high = Wire.read();
   int16_t low = Wire.read();
 
-  return (high << 8) | low;
+  return (high<<8)|low;
 }
