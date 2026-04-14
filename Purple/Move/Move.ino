@@ -19,15 +19,17 @@
 #define TRIG_BACK A1
 #define ECHO_BACK A0
 
-#define TRIG_RIGHT 6
-#define ECHO_RIGHT 7
+#define TRIG_RIGHT A4
+#define ECHO_RIGHT A5
+
+#define BUTTON 7
 
 #define FRONT_BACK_LIMIT 1.5
 #define SIDE_LIMIT 3.5
 
 int speedVal = 150;
 
-// ----------------- Function ------------------
+// ---------------- ULTRASONIC ----------------
 
 float getDistance(int trig, int echo){
 
@@ -38,12 +40,31 @@ float getDistance(int trig, int echo){
   delayMicroseconds(10);
   digitalWrite(trig, LOW);
 
-  long duration = pulseIn(echo, HIGH, 20000); // timeout
+  long duration = pulseIn(echo, HIGH, 20000);
 
-  float distance = duration * 0.0133 / 2.0; // inches
+  if(duration == 0) return -1;
+
+  float distance = duration * 0.0133 / 2.0;
 
   return distance;
 }
+
+// ---------------- PRINT ----------------
+
+void printDistances(){
+
+  float front = getDistance(TRIG_FRONT, ECHO_FRONT);
+  float left  = getDistance(TRIG_LEFT, ECHO_LEFT);
+  float back  = getDistance(TRIG_BACK, ECHO_BACK);
+  float right = getDistance(TRIG_RIGHT, ECHO_RIGHT);
+
+  Serial.print("Front: "); Serial.print(front); Serial.print(" in | ");
+  Serial.print("Left: ");  Serial.print(left);  Serial.print(" in | ");
+  Serial.print("Back: ");  Serial.print(back);  Serial.print(" in | ");
+  Serial.print("Right: "); Serial.print(right); Serial.println(" in");
+}
+
+// ---------------- OBSTACLE ----------------
 
 bool obstacleDetected(){
 
@@ -62,20 +83,21 @@ bool obstacleDetected(){
 
 // ---------------- MOTOR CONTROL ----------------
 
-void setMotor(int pin1, int pin2, int speedVal) {
-  if (speedVal > 0) {
+void setMotor(int pin1, int pin2, int speedVal){
+  if(speedVal > 0){
     digitalWrite(pin1, HIGH);
     digitalWrite(pin2, LOW);
-  } else if (speedVal < 0) {
+  }
+  else if(speedVal < 0){
     digitalWrite(pin1, LOW);
     digitalWrite(pin2, HIGH);
-  } else {
+  }
+  else{
     digitalWrite(pin1, LOW);
     digitalWrite(pin2, LOW);
   }
 }
 
-// Individual wheels
 void setFL(int s){ setMotor(FL1, FL2, s); }
 void setFR(int s){ setMotor(FR1, FR2, -s); }
 void setBR(int s){ setMotor(BR1, BR2, s); }
@@ -90,10 +112,13 @@ void stopMotors(){
 
 // ---------------- MECANUM MOVEMENT ----------------
 
-// Forward
-void forward(){
+void forward(float goal){
 
-  while(true){
+  float start = millis();
+
+  while(true && millis() - start < goal){
+
+    printDistances();
 
     if(obstacleDetected()){
       stopMotors();
@@ -105,14 +130,20 @@ void forward(){
     setBL(speedVal);
     setBR(speedVal);
 
-    delay(10);
+    delay(20);
   }
+
+    stopMotors();
+
 }
 
-// Backward
-void backward(){
+void backward(float goal){
 
-  while(true){
+  float start = millis();
+
+  while(true && millis() - start < goal){
+
+    printDistances();
 
     if(obstacleDetected()){
       stopMotors();
@@ -124,14 +155,20 @@ void backward(){
     setBL(-speedVal);
     setBR(-speedVal);
 
-    delay(10);
+    delay(20);
   }
+
+    stopMotors();
+
 }
 
-// STRAFE RIGHT
-void right(){
+void right(float goal){
 
-  while(true){
+  float start = millis();
+
+  while(true && millis() - start < goal){
+
+    printDistances();
 
     if(obstacleDetected()){
       stopMotors();
@@ -143,14 +180,20 @@ void right(){
     setBL(-speedVal);
     setBR(speedVal);
 
-    delay(10);
+    delay(20);
   }
+
+    stopMotors();
+
 }
 
-// STRAFE LEFT
-void left(){
+void left(float goal){
 
-  while(true){
+  float start = millis();
+
+  while(true && millis() - start < goal){
+
+    printDistances();
 
     if(obstacleDetected()){
       stopMotors();
@@ -162,29 +205,32 @@ void left(){
     setBL(speedVal);
     setBR(-speedVal);
 
-    delay(10);
+    delay(20);
   }
+
+    stopMotors();
+
 }
 
-// Rotate Right
-void rotateRight(){
-  setFL(speedVal);
-  setFR(-speedVal);
-  setBL(speedVal);
-  setBR(-speedVal);
-}
+// void rotateRight(){
+//   setFL(speedVal);
+//   setFR(-speedVal);
+//   setBL(speedVal);
+//   setBR(-speedVal);
+// }
 
-// Rotate Left
-void rotateLeft(){
-  setFL(-speedVal);
-  setFR(speedVal);
-  setBL(-speedVal);
-  setBR(speedVal);
-}
+// void rotateLeft(){
+//   setFL(-speedVal);
+//   setFR(speedVal);
+//   setBL(-speedVal);
+//   setBR(speedVal);
+// }
 
 // ---------------- SETUP ----------------
 
 void setup(){
+
+  Serial.begin(9600);
 
   pinMode(FL1, OUTPUT);
   pinMode(FL2, OUTPUT);
@@ -210,14 +256,26 @@ void setup(){
   pinMode(TRIG_RIGHT, OUTPUT);
   pinMode(ECHO_RIGHT, INPUT);
 
+  pinMode(BUTTON, INPUT_PULLUP);
+
   stopMotors();
+
+  Serial.println("System Ready");
 }
 
-// ---------------- LOOP (TEST) ----------------
+// ---------------- LOOP ----------------
 
 void loop(){
 
-  backward();
-  delay(2000);
+  printDistances();
 
+  if(digitalRead(BUTTON) == LOW){
+
+    delay(50);
+
+    forward(10000);
+
+  }
+
+  delay(200);
 }
